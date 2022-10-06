@@ -1,18 +1,40 @@
+import { checkToken } from "../../backendLibs/checkToken";
+import { readUsersDB, writeUsersDB } from "../../backendLibs/dbLib";
+
 export default function withdrawRoute(req, res) {
   if (req.method === "PUT") {
     //check authentication
     //return res.status(403).json({ ok: false, message: "You do not have permission to withdraw" });
-
+    const user = checkToken(req);
     const amount = req.body.amount;
+    if (!user || user.isAdmin) {
+      return res
+        .status(403)
+        .json({ ok: false, message: "You do not have permission to withdraw" });
+    }
     //validate body
     if (typeof amount !== "number")
       return res.status(400).json({ ok: false, message: "Invalid amount" });
 
     //check if amount < 1
+    if (amount < 1) {
+      return res
+        .status(400)
+        .json({ ok: false, message: "Amount must be greater than 0" });
+    }
     // return res.status(400).json({ ok: false, message: "Amount must be greater than 0" });
-
+    const us = readUsersDB();
+    const usIdx = us.findIndex((x) => x.username === user.username);
+    if (us[usIdx].money >= amount) {
+      us[usIdx].money -= amount;
+      writeUsersDB(us);
+      return res.json({ ok: true, money: us[usIdx].money });
+    } else {
+      return res
+        .status(400)
+        .json({ ok: false, message: "You do not has enough money" });
+    }
     //find and update money in DB (if user has enough money)
-    //return res.status(400).json({ ok: false, message: "You do not has enough money" });
 
     //return response
   } else {
